@@ -1,6 +1,9 @@
-# Tool reference
+---
+layout: default
+title: Tool reference
+---
 
-[← Home](./) · [Setup →](setup)
+# Tool reference
 
 All 16 tools return JSON. Ids are stable OmniFocus identifiers — agents should address items by id, not name. Errors (not found, validation, the cascade guard) come back as readable MCP tool errors the agent can react to.
 

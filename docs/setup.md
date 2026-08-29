@@ -1,6 +1,9 @@
-# Setup
+---
+layout: default
+title: Setup
+---
 
-[← Home](./) · [Tool reference →](tools)
+# Setup
 
 ## Requirements
 

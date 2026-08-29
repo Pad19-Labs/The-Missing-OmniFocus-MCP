@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+  <meta name="description" content="{{ site.description }}">
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="{{ '/' | relative_url }}" aria-label="Homepage" class="wordmark">The Missing OmniFocus MCP</a>
+      <nav class="site-nav">
+        <a href="{{ '/setup' | relative_url }}">Setup</a>
+        <a href="{{ '/tools' | relative_url }}">Tools</a>
+        <a href="https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP">GitHub</a>
+      </nav>
+    </div>
+  </header>
+  <main class="container">
+    {% if page.layout_hero != true %}<div class="prose">{{ content }}</div>{% else %}{{ content }}{% endif %}
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <p>MIT licensed. Not affiliated with The Omni Group. <a href="https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP">Source on GitHub</a></p>
+    </div>
+  </footer>
+</body>
+</html>
