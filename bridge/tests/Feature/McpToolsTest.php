@@ -90,13 +90,20 @@ it('reports a missing task as a tool error, not an exception', function () {
         ->assertHasErrors(['No task with id nope']);
 });
 
-it('surfaces the cascade guard as a tool error the agent can react to', function () {
-    $this->runner->queueError('cascade_confirmation_required', 'The folder contains 7 item(s). Pass confirm_cascade to delete anyway.');
+it('previews a delete and returns a confirmation token instead of deleting', function () {
+    $this->runner->queueOk(['id' => 'f1', 'type' => 'folder', 'name' => 'Work', 'descendants' => 42]);
 
     OmniFocusServer::tool(DeleteItemTool::class, ['type' => 'folder', 'id' => 'f1'])
-        ->assertHasErrors(['The folder contains 7 item(s). Pass confirm_cascade to delete anyway.']);
+        ->assertOk()
+        ->assertSee('requires_confirmation')
+        ->assertSee('confirmation_token');
 
-    $this->assertDatabaseHas('audit_logs', ['action' => 'delete_item', 'status' => 'error']);
+    $this->assertDatabaseHas('audit_logs', ['action' => 'delete_item', 'status' => 'preview']);
+});
+
+it('rejects a bad confirmation token as a tool error', function () {
+    OmniFocusServer::tool(DeleteItemTool::class, ['type' => 'folder', 'id' => 'f1', 'confirmation_token' => 'nope'])
+        ->assertHasErrors();
 });
 
 it('exposes clean kebab-case tool names without a -tool suffix', function () {

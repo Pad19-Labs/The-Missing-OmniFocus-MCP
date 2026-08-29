@@ -3,6 +3,7 @@
 namespace App\OmniFocus;
 
 use App\Models\AuditLog;
+use App\Models\DeletionToken;
 use App\OmniFocus\Contracts\OmniJsRunner;
 use App\OmniFocus\Data\FolderData;
 use App\OmniFocus\Data\ProjectData;
@@ -229,34 +230,94 @@ class OmniFocusClient
     }
 
     /**
-     * @return array{id: string, type: string, name: string, children: int}
+     * Two-step delete. Without a valid confirmation token, previews the target
+     * and returns a single-use token bound to (type, id) — the caller must send
+     * it back on a separate call to actually delete. This separates requesting
+     * a deletion from confirming it, and surfaces the true recursive blast
+     * radius before anything is destroyed.
+     *
+     * @return array<string, mixed>
      */
-    public function deleteItem(string $type, string $id, bool $confirmCascade = false): array
+    public function deleteItem(string $type, string $id, ?string $confirmationToken = null): array
     {
-        return $this->mutate('delete_item', [
+        if ($confirmationToken === null) {
+            return $this->previewDelete($type, $id);
+        }
+
+        $token = DeletionToken::where('token', $confirmationToken)->first();
+
+        if (! $token || ! $token->isValidFor($type, $id)) {
+            throw new CascadeConfirmationRequired(
+                'Invalid, expired, or already-used confirmation token. Call delete_item without a token first to preview and obtain a fresh one.'
+            );
+        }
+
+        $result = $this->mutate('delete_item', [
             'type' => $type,
             'id' => $id,
-            'confirm_cascade' => $confirmCascade,
+            'confirmed' => true,
         ]);
+
+        $token->update(['used_at' => now()]);
+
+        return $result + ['deleted' => true];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function previewDelete(string $type, string $id): array
+    {
+        $data = $this->mutate('preview_delete', ['type' => $type, 'id' => $id], status: 'preview');
+
+        $token = DeletionToken::create([
+            'token' => bin2hex(random_bytes(24)),
+            'type' => $type,
+            'item_id' => $id,
+            'item_name' => $data['name'],
+            'descendants' => $data['descendants'],
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        return [
+            'requires_confirmation' => true,
+            'type' => $type,
+            'id' => $id,
+            'name' => $data['name'],
+            'descendants' => $data['descendants'],
+            'confirmation_token' => $token->token,
+            'message' => $data['descendants'] > 0
+                ? "Deleting this {$type} will permanently remove it and {$data['descendants']} descendant item(s). Call delete_item again with confirmation_token to proceed."
+                : "This {$type} has no descendants. Call delete_item again with confirmation_token to permanently delete it.",
+        ];
     }
 
     /**
      * Run a write template and record it in the audit log, success or failure.
      */
-    private function mutate(string $template, array $args): array
+    private function mutate(string $template, array $args, string $status = 'ok'): array
     {
         $startedAt = hrtime(true);
 
         try {
             $data = $this->call($template, $args);
-            $this->recordAudit($template, $args, 'ok', $this->summarize($data), $startedAt);
+            $this->recordAudit($this->auditAction($template), $args, $status, $this->summarize($data), $startedAt);
 
             return $data;
         } catch (OmniFocusException $e) {
-            $this->recordAudit($template, $args, 'error', ['message' => $e->getMessage()], $startedAt);
+            $this->recordAudit($this->auditAction($template), $args, 'error', ['message' => $e->getMessage()], $startedAt);
 
             throw $e;
         }
+    }
+
+    /**
+     * The preview and confirmed-delete templates are both facets of the
+     * delete_item tool, so they share its audit action name.
+     */
+    private function auditAction(string $template): string
+    {
+        return $template === 'preview_delete' ? 'delete_item' : $template;
     }
 
     private function recordAudit(string $action, array $args, string $status, array $summary, int $startedAtNs): void

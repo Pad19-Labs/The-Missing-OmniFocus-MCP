@@ -8,7 +8,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 
-#[Description('Permanently delete a task, project, or folder. Deleting a container removes everything inside it, so an item with children is refused unless confirm_cascade is true — check the error message for the contents count before confirming. Prefer marking things dropped over deleting when history matters.')]
+#[Description('Permanently delete a task, project, or folder. This is a TWO-STEP operation: call it first WITHOUT confirmation_token to preview the target and its true recursive descendant count — you get back a single-use confirmation_token. Then call again WITH that token to actually delete. Deleting a container removes everything inside it, so always read the descendant count in the preview before confirming. Prefer marking things dropped over deleting when history matters.')]
 class DeleteItemTool extends OmniFocusTool
 {
     public function handle(Request $request): Response
@@ -16,13 +16,13 @@ class DeleteItemTool extends OmniFocusTool
         $validated = $request->validate([
             'type' => ['required', 'in:task,project,folder'],
             'id' => ['required', 'string'],
-            'confirm_cascade' => ['nullable', 'boolean'],
+            'confirmation_token' => ['nullable', 'string'],
         ]);
 
         return $this->respond(fn () => $this->client->deleteItem(
             $validated['type'],
             $validated['id'],
-            confirmCascade: $validated['confirm_cascade'] ?? false,
+            confirmationToken: $validated['confirmation_token'] ?? null,
         ));
     }
 
@@ -34,7 +34,7 @@ class DeleteItemTool extends OmniFocusTool
         return [
             'type' => $schema->string()->enum(['task', 'project', 'folder'])->description('What kind of item to delete.')->required(),
             'id' => $schema->string()->description('The item id.')->required(),
-            'confirm_cascade' => $schema->boolean()->description('Required true to delete an item that still contains children.'),
+            'confirmation_token' => $schema->string()->description('The single-use token from a prior preview call. Omit on the first call to preview; supply it on the second call to delete.'),
         ];
     }
 }
