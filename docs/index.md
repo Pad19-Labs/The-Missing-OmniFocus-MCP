@@ -1,8 +1,8 @@
 # The Missing OmniFocus MCP
 
-**OmniFocus is a brilliant GTD system with no API. This is the missing piece.**
+**For OmniFocus users who also use Claude Desktop: download one file, open it, and Claude talks to your OmniFocus.**
 
-A small, well-tested bridge that exposes your entire OmniFocus database to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io). Claude — or any MCP client — can triage your inbox, file and promote tasks, reorganize your projects and folders, and coach you through a weekly review. All of it through the same first-party automation API the OmniFocus app uses itself, so your years of data are never at risk from reverse-engineered file formats.
+OmniFocus is a brilliant GTD system with no API — this is the missing piece. A well-tested bridge that exposes your entire OmniFocus database to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io). Claude — or any MCP client — can triage your inbox, file and promote tasks, reorganize your projects and folders, and coach you through a weekly review. All of it through the same first-party automation API the OmniFocus app uses itself, so your years of data are never at risk from reverse-engineered file formats.
 
 [Get started →](setup) · [Tool reference →](tools) · [Source on GitHub →](https://github.com/Pad19-Labs/missing-omnifocus-mcp)
 

@@ -1,21 +1,43 @@
 # The Missing OmniFocus MCP
 
-**Give AI agents full, safe, read/write access to your OmniFocus database.**
+**Let Claude read and organize your OmniFocus — download one file, open it, done.**
 
-OmniFocus is a brilliant GTD system with no API. This project is the missing piece: a small [Laravel](https://laravel.com) bridge that exposes your entire OmniFocus database to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io) — so Claude (or any MCP client) can triage your inbox, file and promote tasks, reorganize projects and folders, and coach you through your weekly review, using the same first-party automation API the OmniFocus app uses itself.
+This is for **OmniFocus users who also use Claude Desktop**. OmniFocus is a brilliant GTD system with no API — so Claude can't see your inbox, your projects, or your someday/maybe list. This project fixes that with a single downloadable file. No PHP, no terminal, no configuration.
 
-It ships as a **single self-contained binary** — no PHP, no Composer, nothing to install first. Claude Desktop users get a one-click `.mcpb` bundle.
+## Get started in about a minute
 
-## Why not just another MCP wrapper?
+1. **Download** the `.mcpb` file from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) (`arm64` for Apple Silicon, `x86_64` for Intel Macs).
+2. **Open it.** Claude Desktop installs it as an extension — that's the whole setup.
+3. **Allow the permission** when macOS asks whether Claude may control OmniFocus (first use only).
 
-Most community OmniFocus MCP servers are thin AppleScript-per-call wrappers: stringly-typed, untested, and fragile. This bridge is built differently:
+Then just talk:
 
-- **First-party API only.** Every operation runs through Omni Automation (omniJS) via `osascript` — the same transactional, sync-safe API the app uses. It never touches the reverse-engineered `.ofocus` sync format, so your database is never at risk of corruption.
-- **Injection-proof scripting.** Arguments are passed into omniJS as JSON-encoded data, never interpolated into JavaScript source. A task named `"; deleteObject(library); "` is just a task name.
-- **Typed and tested.** A typed PHP client with DTOs and enums, ~45 Pest tests against a fake runner, plus an opt-in live integration suite that round-trips against a real database and cleans up after itself.
-- **Audited writes.** Every mutation is recorded (action, arguments, result, duration) in a local SQLite audit log. You can always see what an agent did.
-- **Guarded deletes.** Deleting anything that still contains children is refused unless the agent explicitly passes `confirm_cascade` — free manipulation without accidental demolition.
-- **Serialized access.** A lock ensures one script runs inside OmniFocus at a time, with timeouts for hangs.
+> *"What's in my OmniFocus inbox?"*
+> *"File these captures into the right projects and flag anything urgent."*
+> *"That 'learn woodworking' idea — make it an on-hold project in my Someday folder."*
+> *"Walk me through a weekly review."*
+
+You need a Mac with **OmniFocus 4 Pro** running (Pro powers the automation bridge; the standard edition won't work). One sensible precaution before your first session: **OmniFocus → File → Back Up Database** — Claude edits your real system, that's the point.
+
+## What Claude can do with it
+
+- **Tame your inbox** — read every capture, clarify it, file it into the right project, or promote a big idea into a brand-new project in the right folder.
+- **Organize freely** — create, rename, nest, and move projects and folders; set things active, on hold, done, or dropped.
+- **Work your lists** — search everything; filter by project, tag, flag, or due date; complete, defer, tag, and flag tasks.
+- **Coach your GTD practice** — with real visibility into your system, Claude can actually run a weekly review with you instead of guessing.
+
+Everything Claude does is recorded in a local audit log, and deleting anything that still contains items requires explicit confirmation — free manipulation without accidental demolition.
+
+## Why trust it with years of your data?
+
+Most OmniFocus AI integrations are fragile scripts. This one is engineered:
+
+- **First-party API only.** Every operation runs through Omni Automation — the same transactional, sync-safe API the OmniFocus app uses itself. It never touches the reverse-engineered sync format, so your database is never at risk of corruption.
+- **Injection-proof.** Task data is passed as data, never spliced into code. A task named `"; deleteObject(library); "` is just a task name.
+- **Audited writes.** Action, arguments, result, and duration of every change, logged locally.
+- **Guarded deletes.** Anything with children requires an explicit confirm flag.
+- **Tested.** ~50 tests plus a live integration suite that round-trips a real database and cleans up after itself.
+- **Local and private.** Everything runs on your Mac. Your tasks go to Claude only when you ask Claude about them.
 
 ## The 16 tools
 
@@ -29,19 +51,9 @@ Most community OmniFocus MCP servers are thin AppleScript-per-call wrappers: str
 | `get-task` — full detail plus children | `create-folder` / `update-folder` — incl. nesting moves |
 | `get-project` — detail plus all tasks | `delete-item` — with the cascade guard |
 
-## Requirements
+## Other ways to run it
 
-- macOS with **OmniFocus 4 Pro** (Pro is required for the scripting bridge) — the app must be running
-- An MCP client — [Claude Code](https://claude.com/claude-code), Claude Desktop, or anything MCP-compatible
-- Nothing else for the binary install; PHP 8.3+ and Composer only if you run from source
-
-## Install — single binary, no PHP (recommended)
-
-Grab the latest from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) — `arm64` for Apple Silicon, `x86_64` for Intel. The binary is fully self-contained: a static PHP runtime and the app in one file. It sets itself up on first run and keeps its state (auth token, audit log) in `~/Library/Application Support/MissingOmniFocusMCP/`.
-
-**Claude Desktop — one click**: download `missing-omnifocus-mcp-macos-<arch>.mcpb` and open it. That's the whole install.
-
-**Claude Code / other clients**:
+**Claude Code (or any MCP client)** — use the bare binary from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) instead of the `.mcpb`:
 
 ```bash
 chmod +x missing-omnifocus-mcp-macos-arm64
@@ -49,77 +61,41 @@ xattr -d com.apple.quarantine missing-omnifocus-mcp-macos-arm64   # Gatekeeper, 
 claude mcp add --scope user omnifocus -- /path/to/missing-omnifocus-mcp-macos-arm64 mcp:start omnifocus
 ```
 
-The binary speaks **stdio only** — your MCP client launches and manages it; there is nothing to keep running. If you want the shared HTTP server instead, use the source install below.
+The binary is fully self-contained (a static PHP runtime and the app in one file), speaks stdio so your client launches and manages it, and keeps its state — auth token, audit log — in `~/Library/Application Support/MissingOmniFocusMCP/`.
 
-## Install — from source
-
-For contributors, or if you want the HTTP transport:
+**From source** — for contributors, or for the persistent HTTP transport (one shared server, bearer-token guarded, Tailscale-able for remote access). Requires PHP 8.3+ (the setup script offers to install it):
 
 ```bash
 git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git
 cd missing-omnifocus-mcp
-./setup.sh   # offers to install PHP via php.new if missing
+./setup.sh
 ```
 
-The script installs dependencies, creates `.env`, generates an auth token, migrates the audit database, and runs the test suite. Then pick a transport:
-
-### Option A — stdio (simplest: nothing to keep running)
-
-The MCP client spawns the bridge on demand and talks over stdin/stdout.
+Then either register stdio (`claude mcp add --scope user omnifocus -- php /absolute/path/to/bridge/artisan mcp:start omnifocus`) or start the HTTP server:
 
 ```bash
-claude mcp add --scope user omnifocus -- php /absolute/path/to/bridge/artisan mcp:start omnifocus
+php bridge/artisan serve --host=127.0.0.1 --port=8321
 ```
 
-**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json` — quit Desktop first; use your full PHP binary path, GUI apps don't inherit your shell PATH):
-
-```json
-{
-  "mcpServers": {
-    "omnifocus": {
-      "command": "/full/path/to/php",
-      "args": ["/absolute/path/to/bridge/artisan", "mcp:start", "omnifocus"]
-    }
-  }
-}
-```
-
-### Option B — HTTP (one persistent server, shared by every client)
-
-Start the server (any of these):
-
-```bash
-php bridge/artisan serve --host=127.0.0.1 --port=8321   # foreground, simplest
-```
-
-- **launchd** (auto-start on login): see `extras/omnifocus-mcp-bridge.plist`
-- **[Solo](https://soloterm.com)** users: a `solo.yml` is included — trust the "MCP bridge" process once and it auto-starts
-
-Then register the URL with the bearer token from `bridge/.env`:
+and register it with the token from `bridge/.env`:
 
 ```bash
 claude mcp add --scope user --transport http omnifocus http://127.0.0.1:8321/mcp \
   --header "Authorization: Bearer YOUR_MCP_AUTH_TOKEN"
 ```
 
-The endpoint **fails closed**: no configured token means every request is rejected. It binds to localhost only; to reach it from another machine, put it behind something like [Tailscale](https://tailscale.com) — never expose it bare.
-
-## First run
-
-1. **Back up first**: OmniFocus → File → Back Up Database. The bridge is careful, but agents write freely by design.
-2. The first call triggers a macOS prompt — *"…wants to control OmniFocus"*. Allow it. Each launch context (terminal, Desktop, launchd) needs its own one-time grant.
-3. Ask your agent for an overview of your OmniFocus database and enjoy.
+The HTTP endpoint fails closed (no token configured → every request rejected), binds to localhost only, and can auto-start via launchd (`extras/omnifocus-mcp-bridge.plist`) or [Solo](https://soloterm.com) (`solo.yml` included). To reach it from another machine, put it behind [Tailscale](https://tailscale.com) — never expose it bare.
 
 ## How it works
 
 ```
-MCP client (Claude Code / Desktop / …)
-   │  stdio or streamable HTTP (bearer token)
+Claude Desktop / Claude Code / any MCP client
+   │  stdio (or HTTP with bearer token)
    ▼
-Laravel bridge (this repo)
+Self-contained bridge (Laravel inside a single binary)
    │  typed client → omniJS templates + JSON args → audit log
    ▼
-osascript -l JavaScript  →  OmniFocus.evaluateJavascript(…)
+osascript  →  OmniFocus.evaluateJavascript(…)
    ▼
 Your OmniFocus database (first-party Omni Automation API)
 ```
@@ -137,10 +113,11 @@ The integration suite creates loudly-prefixed disposable objects and removes the
 ## Roadmap
 
 - GTD agent skills built on the tools (inbox triage, weekly-review coaching)
+- Notarized releases (no Gatekeeper incantations)
 - Remote access recipes (Tailscale) for Linux and mobile clients
 - Repeating-task (RecurrenceRule) editing
 - When Omni ships official MCP support, this bridge's transport layer is designed to be swappable
 
 ## License
 
-[MIT](LICENSE) — built with affection for OmniFocus by people who have used it for years. Not affiliated with The Omni Group.
+[MIT](LICENSE) — built with affection for OmniFocus by people who have used it for years. Not affiliated with The Omni Group. Prebuilt binaries embed PHP and permissively-licensed libraries; see [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md).

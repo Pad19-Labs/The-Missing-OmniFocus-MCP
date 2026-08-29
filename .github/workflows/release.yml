@@ -9,26 +9,28 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - runner: macos-14
-            arch: arm64
-          - runner: macos-13
-            arch: x86_64
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-      - name: Build binary
-        run: ./scripts/build-binary.sh ${{ matrix.arch }}
-      - name: Build .mcpb bundle
-        run: VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-mcpb.sh ${{ matrix.arch }}
-      - name: Attach to release
+      - name: Build binaries (both architectures)
+        run: |
+          ./scripts/build-binary.sh arm64
+          ./scripts/build-binary.sh x86_64
+      - name: Build .mcpb bundles
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-mcpb.sh arm64
+          VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-mcpb.sh x86_64
+      - name: Checksums
+        run: (cd dist && shasum -a 256 * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/missing-omnifocus-mcp-macos-${{ matrix.arch }}
-            dist/missing-omnifocus-mcp-macos-${{ matrix.arch }}.mcpb
+            dist/missing-omnifocus-mcp-macos-arm64
+            dist/missing-omnifocus-mcp-macos-arm64.mcpb
+            dist/missing-omnifocus-mcp-macos-x86_64
+            dist/missing-omnifocus-mcp-macos-x86_64.mcpb
+            dist/SHA256SUMS.txt

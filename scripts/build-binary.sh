@@ -46,9 +46,13 @@ OUT="$DIST/missing-omnifocus-mcp-macos-$OUT_ARCH"
 cat "$BUILD/tools/micro.sfx" "$BUILD/app/app.phar" > "$OUT"
 chmod +x "$OUT"
 
-echo "==> Smoke test"
-rm -rf "$BUILD/smoke-data"
-OMNIFOCUS_MCP_DATA_DIR="$BUILD/smoke-data" "$OUT" --version
+if [ "$OUT_ARCH" = "$(uname -m)" ]; then
+    echo "==> Smoke test"
+    rm -rf "$BUILD/smoke-data"
+    OMNIFOCUS_MCP_DATA_DIR="$BUILD/smoke-data" "$OUT" --version
+else
+    echo "==> Skipping smoke test (cross-arch build)"
+fi
 
 echo
 echo "Built: $OUT ($(du -h "$OUT" | cut -f1 | tr -d ' '))"
