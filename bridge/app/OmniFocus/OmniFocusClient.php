@@ -14,6 +14,7 @@ use App\OmniFocus\Exceptions\CascadeConfirmationRequired;
 use App\OmniFocus\Exceptions\NotFoundException;
 use App\OmniFocus\Exceptions\OmniFocusException;
 use App\OmniFocus\Exceptions\ScriptException;
+use Illuminate\Support\Facades\Log;
 use JsonException;
 
 class OmniFocusClient
@@ -301,14 +302,23 @@ class OmniFocusClient
 
         try {
             $data = $this->call($template, $args);
-            $this->recordAudit($this->auditAction($template), $args, $status, $this->summarize($data), $startedAt);
-
-            return $data;
         } catch (OmniFocusException $e) {
+            // The mutation did not commit, so an audit failure here is harmless.
             $this->recordAudit($this->auditAction($template), $args, 'error', ['message' => $e->getMessage()], $startedAt);
 
             throw $e;
         }
+
+        // The mutation HAS committed in OmniFocus. An audit-log failure must
+        // never turn this into a reported error, or the agent will retry and
+        // duplicate the write. Record best-effort; surface a warning instead.
+        $audited = $this->recordAudit($this->auditAction($template), $args, $status, $this->summarize($data), $startedAt);
+
+        if (! $audited) {
+            $data['audit_status'] = 'failed';
+        }
+
+        return $data;
     }
 
     /**
@@ -320,15 +330,31 @@ class OmniFocusClient
         return $template === 'preview_delete' ? 'delete_item' : $template;
     }
 
-    private function recordAudit(string $action, array $args, string $status, array $summary, int $startedAtNs): void
+    /**
+     * Best-effort audit write. Returns false (never throws) if the log is
+     * unavailable, so a committed mutation is still reported as success.
+     */
+    private function recordAudit(string $action, array $args, string $status, array $summary, int $startedAtNs): bool
     {
-        AuditLog::create([
-            'action' => $action,
-            'arguments' => array_filter($args, fn ($v) => $v !== null),
-            'result_summary' => $summary,
-            'status' => $status,
-            'duration_ms' => intdiv(hrtime(true) - $startedAtNs, 1_000_000),
-        ]);
+        try {
+            AuditLog::create([
+                'action' => $action,
+                'arguments' => array_filter($args, fn ($v) => $v !== null),
+                'result_summary' => $summary,
+                'status' => $status,
+                'duration_ms' => intdiv(hrtime(true) - $startedAtNs, 1_000_000),
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('omafocus: audit log write failed', [
+                'action' => $action,
+                'status' => $status,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function summarize(array $data): array
