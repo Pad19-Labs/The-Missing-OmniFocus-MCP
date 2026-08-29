@@ -4,6 +4,8 @@
 
 OmniFocus is a brilliant GTD system with no API. This project is the missing piece: a small [Laravel](https://laravel.com) bridge that exposes your entire OmniFocus database to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io) — so Claude (or any MCP client) can triage your inbox, file and promote tasks, reorganize projects and folders, and coach you through your weekly review, using the same first-party automation API the OmniFocus app uses itself.
 
+It ships as a **single self-contained binary** — no PHP, no Composer, nothing to install first. Claude Desktop users get a one-click `.mcpb` bundle.
+
 ## Why not just another MCP wrapper?
 
 Most community OmniFocus MCP servers are thin AppleScript-per-call wrappers: stringly-typed, untested, and fragile. This bridge is built differently:
@@ -35,7 +37,7 @@ Most community OmniFocus MCP servers are thin AppleScript-per-call wrappers: str
 
 ## Install — single binary, no PHP (recommended)
 
-Grab the latest from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases). The binary is fully self-contained — a static PHP runtime and the app in one file. It keeps its state (auth token, audit log) in `~/Library/Application Support/MissingOmniFocusMCP/` and sets itself up on first run.
+Grab the latest from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) — `arm64` for Apple Silicon, `x86_64` for Intel. The binary is fully self-contained: a static PHP runtime and the app in one file. It sets itself up on first run and keeps its state (auth token, audit log) in `~/Library/Application Support/MissingOmniFocusMCP/`.
 
 **Claude Desktop — one click**: download `missing-omnifocus-mcp-macos-<arch>.mcpb` and open it. That's the whole install.
 
@@ -47,7 +49,11 @@ xattr -d com.apple.quarantine missing-omnifocus-mcp-macos-arm64   # Gatekeeper, 
 claude mcp add --scope user omnifocus -- /path/to/missing-omnifocus-mcp-macos-arm64 mcp:start omnifocus
 ```
 
+The binary speaks **stdio only** — your MCP client launches and manages it; there is nothing to keep running. If you want the shared HTTP server instead, use the source install below.
+
 ## Install — from source
+
+For contributors, or if you want the HTTP transport:
 
 ```bash
 git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git

@@ -8,9 +8,11 @@
 - An MCP client: [Claude Code](https://claude.com/claude-code), Claude Desktop, or any MCP-compatible agent
 - PHP is **not** required for the binary install below — only for running from source
 
+**Before your first agent session**: OmniFocus → File → Back Up Database. The bridge is careful by design, but agents write freely — that is the point.
+
 ## Install — single binary (recommended)
 
-Download from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) — the binary bundles its own PHP runtime and sets itself up on first run (state lives in `~/Library/Application Support/MissingOmniFocusMCP/`).
+Download from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) — `arm64` for Apple Silicon, `x86_64` for Intel. The binary bundles its own PHP runtime, provisions itself on first run (auth token, audit database — state lives in `~/Library/Application Support/MissingOmniFocusMCP/`), and speaks stdio: your MCP client launches and manages it, so there is nothing to keep running.
 
 **Claude Desktop**: download the `.mcpb` bundle and open it — one-click install.
 
@@ -18,23 +20,25 @@ Download from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/rel
 
 ```bash
 chmod +x missing-omnifocus-mcp-macos-arm64
-xattr -d com.apple.quarantine missing-omnifocus-mcp-macos-arm64
+xattr -d com.apple.quarantine missing-omnifocus-mcp-macos-arm64   # Gatekeeper, until releases are notarized
 claude mcp add --scope user omnifocus -- /path/to/missing-omnifocus-mcp-macos-arm64 mcp:start omnifocus
 ```
 
+The first call triggers a macOS prompt — *"…wants to control OmniFocus"*. Allow it.
+
 ## Install — from source
+
+For contributors, or if you want the shared HTTP transport:
 
 ```bash
 git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git
 cd missing-omnifocus-mcp
-./setup.sh
+./setup.sh   # offers to install PHP via php.new if missing
 ```
 
 The script installs dependencies, creates `.env` with a fresh auth token, migrates the local audit database, and runs the test suite. It is safe to re-run.
 
-**Before your first agent session**: OmniFocus → File → Back Up Database. The bridge is careful by design, but agents write freely — that is the point.
-
-## Choose a transport
+## Transports (source install)
 
 ### stdio — simplest
 

@@ -28,12 +28,13 @@ Most OmniFocus MCP servers are thin AppleScript wrappers — stringly-typed, unt
 | **Tested** | ~45 fast tests plus a live integration suite that cleans up after itself. |
 | **Fails closed** | The HTTP transport rejects everything if no auth token is configured. |
 
-## Two ways to run it
+## Installs in one step — no PHP required
 
-- **stdio** — your MCP client spawns the bridge on demand. Nothing to keep running.
-- **HTTP** — one persistent local server shared by every client on your Mac, bearer-token guarded, ready to sit behind Tailscale for remote access.
+It ships as a **single self-contained binary** with its own runtime baked in. Claude Desktop users download a `.mcpb` bundle and double-click it — that's the entire install. Claude Code users register the binary with one command. It provisions itself on first run: auth token, audit database, everything.
 
-Requires macOS, OmniFocus 4 Pro, and PHP 8.3+. [Setup takes about two minutes →](setup)
+Prefer running from source? The Laravel app is right there in the repo, with a persistent bearer-token-guarded **HTTP transport** ready to sit behind Tailscale for remote access.
+
+Requires only macOS and OmniFocus 4 Pro. [Setup takes about two minutes →](setup)
 
 ---
 
