@@ -67,7 +67,7 @@ The binary is fully self-contained (a static PHP runtime and the app in one file
 
 ```bash
 git clone https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP.git
-cd missing-omnifocus-mcp
+cd The-Missing-OmniFocus-MCP
 ./setup.sh
 ```
 

@@ -32,7 +32,7 @@ For contributors, or if you want the shared HTTP transport:
 
 ```bash
 git clone https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP.git
-cd missing-omnifocus-mcp
+cd The-Missing-OmniFocus-MCP
 ./setup.sh   # offers to install PHP via php.new if missing
 ```
 
