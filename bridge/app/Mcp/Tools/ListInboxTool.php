@@ -13,9 +13,14 @@ class ListInboxTool extends OmniFocusTool
 {
     public function handle(Request $request): Response
     {
+        $validated = $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'offset' => ['nullable', 'integer', 'min:0'],
+        ]);
+
         return $this->respond(fn () => $this->client->listInbox(
-            limit: (int) $request->get('limit', 50),
-            offset: (int) $request->get('offset', 0),
+            limit: $validated['limit'] ?? 50,
+            offset: $validated['offset'] ?? 0,
         ));
     }
 

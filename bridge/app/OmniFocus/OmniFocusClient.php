@@ -125,6 +125,10 @@ class OmniFocusClient
         ?array $tags = null,
         ?int $estimatedMinutes = null,
     ): TaskData {
+        if ($projectId !== null && $parentTaskId !== null) {
+            throw new ScriptException('create_task accepts project_id or parent_task_id, not both.');
+        }
+
         $data = $this->mutate('create_task', [
             'name' => $name,
             'note' => $note,
@@ -156,6 +160,11 @@ class OmniFocusClient
         ?string $parentTaskId = null,
         bool $toInbox = false,
     ): TaskData {
+        $destinations = array_filter([$projectId, $parentTaskId, $toInbox ?: null]);
+        if (count($destinations) !== 1) {
+            throw new ScriptException('move_task requires exactly one destination: project_id, parent_task_id, or to_inbox.');
+        }
+
         $data = $this->mutate('move_task', [
             'id' => $id,
             'project_id' => $projectId,
