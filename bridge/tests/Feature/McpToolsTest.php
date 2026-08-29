@@ -57,11 +57,11 @@ it('lists projects filtered by status', function () {
 });
 
 it('creates a task and audits it', function () {
-    $this->runner->queueOk(['task' => mcpTask(['name' => 'Call Kaishan'])]);
+    $this->runner->queueOk(['task' => mcpTask(['name' => 'Call the vendor'])]);
 
-    OmniFocusServer::tool(CreateTaskTool::class, ['name' => 'Call Kaishan', 'tags' => ['calls']])
+    OmniFocusServer::tool(CreateTaskTool::class, ['name' => 'Call the vendor', 'tags' => ['calls']])
         ->assertOk()
-        ->assertSee('Call Kaishan');
+        ->assertSee('Call the vendor');
 
     $this->assertDatabaseHas('audit_logs', ['action' => 'create_task', 'status' => 'ok']);
 });

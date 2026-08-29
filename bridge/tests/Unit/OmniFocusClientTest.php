@@ -106,7 +106,7 @@ it('lists projects as ProjectData with parsed status enum', function () {
     $runner = new FakeOmniJsRunner;
     $runner->queueOk(['total' => 1, 'projects' => [[
         'id' => 'proj1',
-        'name' => 'NORDVEST launch',
+        'name' => 'Website launch',
         'status' => 'on_hold',
         'folder_id' => 'f1',
         'folder' => 'Work',

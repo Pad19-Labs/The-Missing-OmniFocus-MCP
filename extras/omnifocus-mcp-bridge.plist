@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Optional launchd job that keeps the HTTP transport running on login.
+  Replace __BRIDGE_DIR__ and __PHP__ with absolute paths, then:
+    cp extras/dev.omnifocus-mcp.bridge.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/dev.omnifocus-mcp.bridge.plist
+  Note: the launchd context needs its own macOS Automation approval for
+  OmniFocus the first time it runs.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>dev.omnifocus-mcp.bridge</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PHP__</string>
+        <string>artisan</string>
+        <string>serve</string>
+        <string>--host=127.0.0.1</string>
+        <string>--port=8321</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>__BRIDGE_DIR__</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/omnifocus-mcp-bridge.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/omnifocus-mcp-bridge.log</string>
+</dict>
+</plist>

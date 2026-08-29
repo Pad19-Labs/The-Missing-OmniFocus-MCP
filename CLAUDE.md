@@ -1,10 +1,12 @@
-# omafocus
+# The Missing OmniFocus MCP
+
+(Working directory is still named `omafocus` locally; the public name is "The Missing OmniFocus MCP", repo slug `missing-omnifocus-mcp`. Open source under MIT; docs site lives in `docs/` for GitHub Pages.)
 
 Give AI agents full, reliable read/write access to OmniFocus data. OmniFocus stays the UI (capture, mobile, sync); we build the agent-facing layer. Long-term: a bridge service on the always-on Mac with a typed API, an MCP veneer on top, reachable from Linux over the network. Writes go through Omni Automation only — never hand-write the `.ofocus` sync format.
 
 ## Status
 
-- **2026-08-29 — Spike complete.** Full round-trip proven via `osascript -l JavaScript` → `Application("OmniFocus").evaluateJavascript(...)`: full DB dump to JSON (~1,460 tasks, 130 projects, 486 inbox items), task created in inbox, task deleted. Scripts in `spike/`.
+- **2026-08-29 — Spike complete.** Full round-trip proven via `osascript -l JavaScript` → `Application("OmniFocus").evaluateJavascript(...)`: full DB dump to JSON (a ~1,500-item real database), task created in inbox, task deleted. Scripts in `spike/`.
 - **2026-08-29 — Organizing spike complete** (`spike/06`–`08`): folders/projects can be freely created, renamed, nested, moved, re-statused, and deleted. Inbox tasks can be filed into projects (`moveTasks`) and promoted to projects (`convertTasksToProjects`) — the core verbs for agent-driven GTD organizing all work.
 - **2026-08-29 — Bridge v0.1 shipped** (`bridge/`, Laravel 13): typed read/write client over omniJS, audit-logged mutations, guarded cascade deletes, and an MCP server (`laravel/mcp`, stdio) exposing 16 tools. Run tests: `cd bridge && ./vendor/bin/pest` (unit/feature) or `./vendor/bin/pest --group=integration` (live OmniFocus).
 - **2026-08-29 — HTTP transport shipped.** `POST /mcp` (streamable HTTP) guarded by a bearer token (`MCP_AUTH_TOKEN` in `bridge/.env`, fails closed). Served by `php artisan serve` on `127.0.0.1:8321`, auto-started by Solo (`solo.yml`, process "MCP bridge" — must be trusted once in the Solo UI). Registered machine-wide in Claude Code at user scope (`claude mcp list` → omnifocus). The stdio transport (`php bridge/artisan mcp:start omnifocus`) still exists for Claude Desktop or fallback. Next: GTD agent layer (inbox-triage skill, weekly-review coach); Tailscale exposure of :8321 for Linux/mobile.

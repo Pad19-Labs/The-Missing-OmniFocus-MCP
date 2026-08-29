@@ -38,13 +38,13 @@ function fakeProject(array $overrides = []): array
 }
 
 it('creates a task and records an audit row', function () {
-    $this->runner->queueOk(['task' => fakeTask(['name' => 'Call Kaishan', 'flagged' => true])]);
+    $this->runner->queueOk(['task' => fakeTask(['name' => 'Call the vendor', 'flagged' => true])]);
 
-    $task = $this->client->createTask(name: 'Call Kaishan', flagged: true, tags: ['calls']);
+    $task = $this->client->createTask(name: 'Call the vendor', flagged: true, tags: ['calls']);
 
     expect($task)->toBeInstanceOf(TaskData::class)
-        ->and($task->name)->toBe('Call Kaishan')
-        ->and($this->runner->lastScript())->toContain('"name":"Call Kaishan"')
+        ->and($task->name)->toBe('Call the vendor')
+        ->and($this->runner->lastScript())->toContain('"name":"Call the vendor"')
         ->toContain('"flagged":true')
         ->toContain('"tags":["calls"]');
 
