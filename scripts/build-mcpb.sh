@@ -24,7 +24,7 @@ cat > "$STAGE/manifest.json" <<JSON
   "version": "${VERSION}",
   "description": "Full read/write access to your OmniFocus database for AI agents: inbox triage, task filing, project organization, GTD coaching. Requires OmniFocus 4 Pro running on this Mac.",
   "author": { "name": "Peter Ramsing" },
-  "homepage": "https://github.com/Pad19-Labs/missing-omnifocus-mcp",
+  "homepage": "https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP",
   "server": {
     "type": "binary",
     "entry_point": "server/missing-omnifocus-mcp",

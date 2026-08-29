@@ -6,7 +6,7 @@ This is for **OmniFocus users who also use Claude Desktop**. OmniFocus is a bril
 
 ## Get started in about a minute
 
-1. **Download** the `.mcpb` file from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) (`arm64` for Apple Silicon, `x86_64` for Intel Macs).
+1. **Download** the `.mcpb` file from [Releases](https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP/releases) (`arm64` for Apple Silicon, `x86_64` for Intel Macs).
 2. **Open it.** Claude Desktop installs it as an extension — that's the whole setup.
 3. **Allow the permission** when macOS asks whether Claude may control OmniFocus (first use only).
 
@@ -53,7 +53,7 @@ Most OmniFocus AI integrations are fragile scripts. This one is engineered:
 
 ## Other ways to run it
 
-**Claude Code (or any MCP client)** — use the bare binary from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) instead of the `.mcpb`:
+**Claude Code (or any MCP client)** — use the bare binary from [Releases](https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP/releases) instead of the `.mcpb`:
 
 ```bash
 chmod +x missing-omnifocus-mcp-macos-arm64
@@ -66,7 +66,7 @@ The binary is fully self-contained (a static PHP runtime and the app in one file
 **From source** — for contributors, or for the persistent HTTP transport (one shared server, bearer-token guarded, Tailscale-able for remote access). Requires PHP 8.3+ (the setup script offers to install it):
 
 ```bash
-git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git
+git clone https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP.git
 cd missing-omnifocus-mcp
 ./setup.sh
 ```

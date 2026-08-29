@@ -3,16 +3,16 @@
 # sha256 for each binary (shasum -a 256 <file>).
 class MissingOmnifocusMcp < Formula
   desc "Full read/write access to OmniFocus for AI agents over MCP"
-  homepage "https://github.com/Pad19-Labs/missing-omnifocus-mcp"
+  homepage "https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP"
   version "0.1.0"
 
   on_arm do
-    url "https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases/download/v#{version}/missing-omnifocus-mcp-macos-arm64"
+    url "https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP/releases/download/v#{version}/missing-omnifocus-mcp-macos-arm64"
     sha256 "REPLACE_WITH_ARM64_SHA256"
   end
 
   on_intel do
-    url "https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases/download/v#{version}/missing-omnifocus-mcp-macos-x86_64"
+    url "https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP/releases/download/v#{version}/missing-omnifocus-mcp-macos-x86_64"
     sha256 "REPLACE_WITH_X86_64_SHA256"
   end
 

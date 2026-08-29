@@ -12,7 +12,7 @@
 
 ## Install — single binary (recommended)
 
-Download from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) — `arm64` for Apple Silicon, `x86_64` for Intel. The binary bundles its own PHP runtime, provisions itself on first run (auth token, audit database — state lives in `~/Library/Application Support/MissingOmniFocusMCP/`), and speaks stdio: your MCP client launches and manages it, so there is nothing to keep running.
+Download from [Releases](https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP/releases) — `arm64` for Apple Silicon, `x86_64` for Intel. The binary bundles its own PHP runtime, provisions itself on first run (auth token, audit database — state lives in `~/Library/Application Support/MissingOmniFocusMCP/`), and speaks stdio: your MCP client launches and manages it, so there is nothing to keep running.
 
 **Claude Desktop**: download the `.mcpb` bundle and open it — one-click install.
 
@@ -31,7 +31,7 @@ The first call triggers a macOS prompt — *"…wants to control OmniFocus"*. Al
 For contributors, or if you want the shared HTTP transport:
 
 ```bash
-git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git
+git clone https://github.com/Pad19-Labs/The-Missing-OmniFocus-MCP.git
 cd missing-omnifocus-mcp
 ./setup.sh   # offers to install PHP via php.new if missing
 ```
