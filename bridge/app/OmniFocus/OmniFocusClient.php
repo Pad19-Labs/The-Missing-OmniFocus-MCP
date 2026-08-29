@@ -2,12 +2,16 @@
 
 namespace App\OmniFocus;
 
+use App\Models\AuditLog;
 use App\OmniFocus\Contracts\OmniJsRunner;
+use App\OmniFocus\Data\FolderData;
 use App\OmniFocus\Data\ProjectData;
 use App\OmniFocus\Data\TaskData;
 use App\OmniFocus\Enums\ProjectStatus;
 use App\OmniFocus\Enums\TaskStatus;
+use App\OmniFocus\Exceptions\CascadeConfirmationRequired;
 use App\OmniFocus\Exceptions\NotFoundException;
+use App\OmniFocus\Exceptions\OmniFocusException;
 use App\OmniFocus\Exceptions\ScriptException;
 use JsonException;
 
@@ -105,6 +109,178 @@ class OmniFocusClient
         ];
     }
 
+    /**
+     * @param  list<string>|null  $tags
+     */
+    public function createTask(
+        string $name,
+        ?string $note = null,
+        ?string $projectId = null,
+        ?string $parentTaskId = null,
+        ?string $due = null,
+        ?string $defer = null,
+        ?bool $flagged = null,
+        ?array $tags = null,
+        ?int $estimatedMinutes = null,
+    ): TaskData {
+        $data = $this->mutate('create_task', [
+            'name' => $name,
+            'note' => $note,
+            'project_id' => $projectId,
+            'parent_task_id' => $parentTaskId,
+            'due' => $due,
+            'defer' => $defer,
+            'flagged' => $flagged,
+            'tags' => $tags,
+            'estimated_minutes' => $estimatedMinutes,
+        ]);
+
+        return TaskData::fromArray($data['task']);
+    }
+
+    /**
+     * @param  array{name?: string, note?: string, due?: ?string, defer?: ?string, flagged?: bool, tags?: list<string>, estimated_minutes?: int, status?: string}  $fields
+     */
+    public function updateTask(string $id, array $fields): TaskData
+    {
+        $data = $this->mutate('update_task', ['id' => $id] + $fields);
+
+        return TaskData::fromArray($data['task']);
+    }
+
+    public function moveTask(
+        string $id,
+        ?string $projectId = null,
+        ?string $parentTaskId = null,
+        bool $toInbox = false,
+    ): TaskData {
+        $data = $this->mutate('move_task', [
+            'id' => $id,
+            'project_id' => $projectId,
+            'parent_task_id' => $parentTaskId,
+            'to_inbox' => $toInbox,
+        ]);
+
+        return TaskData::fromArray($data['task']);
+    }
+
+    public function promoteTaskToProject(
+        string $taskId,
+        ?string $folderId = null,
+        ?ProjectStatus $status = null,
+    ): ProjectData {
+        $data = $this->mutate('promote_task_to_project', [
+            'task_id' => $taskId,
+            'folder_id' => $folderId,
+            'status' => $status?->value,
+        ]);
+
+        return ProjectData::fromArray($data['project']);
+    }
+
+    public function createProject(
+        string $name,
+        ?string $folderId = null,
+        ?bool $sequential = null,
+        bool $singleton = false,
+        ?ProjectStatus $status = null,
+        ?string $note = null,
+    ): ProjectData {
+        $data = $this->mutate('create_project', [
+            'name' => $name,
+            'folder_id' => $folderId,
+            'sequential' => $sequential,
+            'singleton' => $singleton,
+            'status' => $status?->value,
+            'note' => $note,
+        ]);
+
+        return ProjectData::fromArray($data['project']);
+    }
+
+    /**
+     * @param  array{name?: string, note?: string, folder_id?: string, status?: string, sequential?: bool, due?: ?string, defer?: ?string}  $fields
+     */
+    public function updateProject(string $id, array $fields): ProjectData
+    {
+        $data = $this->mutate('update_project', ['id' => $id] + $fields);
+
+        return ProjectData::fromArray($data['project']);
+    }
+
+    public function createFolder(string $name, ?string $parentFolderId = null): FolderData
+    {
+        $data = $this->mutate('create_folder', [
+            'name' => $name,
+            'parent_folder_id' => $parentFolderId,
+        ]);
+
+        return FolderData::fromArray($data['folder']);
+    }
+
+    /**
+     * @param  array{name?: string, parent_folder_id?: string}  $fields
+     */
+    public function updateFolder(string $id, array $fields): FolderData
+    {
+        $data = $this->mutate('update_folder', ['id' => $id] + $fields);
+
+        return FolderData::fromArray($data['folder']);
+    }
+
+    /**
+     * @return array{id: string, type: string, name: string, children: int}
+     */
+    public function deleteItem(string $type, string $id, bool $confirmCascade = false): array
+    {
+        return $this->mutate('delete_item', [
+            'type' => $type,
+            'id' => $id,
+            'confirm_cascade' => $confirmCascade,
+        ]);
+    }
+
+    /**
+     * Run a write template and record it in the audit log, success or failure.
+     */
+    private function mutate(string $template, array $args): array
+    {
+        $startedAt = hrtime(true);
+
+        try {
+            $data = $this->call($template, $args);
+            $this->recordAudit($template, $args, 'ok', $this->summarize($data), $startedAt);
+
+            return $data;
+        } catch (OmniFocusException $e) {
+            $this->recordAudit($template, $args, 'error', ['message' => $e->getMessage()], $startedAt);
+
+            throw $e;
+        }
+    }
+
+    private function recordAudit(string $action, array $args, string $status, array $summary, int $startedAtNs): void
+    {
+        AuditLog::create([
+            'action' => $action,
+            'arguments' => array_filter($args, fn ($v) => $v !== null),
+            'result_summary' => $summary,
+            'status' => $status,
+            'duration_ms' => intdiv(hrtime(true) - $startedAtNs, 1_000_000),
+        ]);
+    }
+
+    private function summarize(array $data): array
+    {
+        foreach (['task', 'project', 'folder'] as $key) {
+            if (isset($data[$key]['id'])) {
+                return [$key => ['id' => $data[$key]['id'], 'name' => $data[$key]['name'] ?? null]];
+            }
+        }
+
+        return $data;
+    }
+
     private function call(string $template, array $args = []): array
     {
         $script = $this->scripts->compose($template, $args);
@@ -121,6 +297,7 @@ class OmniFocusClient
 
             throw match ($error['code'] ?? 'unknown') {
                 'not_found' => new NotFoundException($error['message']),
+                'cascade_confirmation_required' => new CascadeConfirmationRequired($error['message']),
                 default => new ScriptException($error['message'] ?? 'omniJS error'),
             };
         }

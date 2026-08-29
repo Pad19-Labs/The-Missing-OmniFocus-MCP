@@ -33,6 +33,33 @@ function projectStatusName(s) {
   return names.get(s) || String(s);
 }
 
+function projectStatusFromName(name) {
+  const statuses = new Map([
+    ["active", Project.Status.Active],
+    ["done", Project.Status.Done],
+    ["dropped", Project.Status.Dropped],
+    ["on_hold", Project.Status.OnHold],
+  ]);
+  return statuses.get(name);
+}
+
+function findOrCreateTag(name) {
+  return flattenedTags.find(x => x.name === name) || new Tag(name);
+}
+
+function applyTaskFields(t, args) {
+  if (args.name !== undefined && args.name !== null) t.name = args.name;
+  if (args.note !== undefined && args.note !== null) t.note = args.note;
+  if (args.due !== undefined) t.dueDate = args.due ? new Date(args.due) : null;
+  if (args.defer !== undefined) t.deferDate = args.defer ? new Date(args.defer) : null;
+  if (args.flagged !== undefined && args.flagged !== null) t.flagged = args.flagged;
+  if (args.estimated_minutes !== undefined && args.estimated_minutes !== null) t.estimatedMinutes = args.estimated_minutes;
+  if (args.tags !== undefined && args.tags !== null) {
+    t.clearTags();
+    for (const name of args.tags) t.addTag(findOrCreateTag(name));
+  }
+}
+
 function serializeTask(t, noteLimit) {
   const limit = noteLimit === undefined ? 500 : noteLimit;
   return {
