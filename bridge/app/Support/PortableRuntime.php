@@ -38,6 +38,13 @@ final class PortableRuntime
     {
         $dir ??= self::dataPath();
 
+        // The data dir holds the bearer token and an audit log of task/project
+        // names and notes — keep it and its contents readable only by the owner.
+        if (! is_dir($dir)) {
+            mkdir($dir, 0700, true);
+        }
+        @chmod($dir, 0700);
+
         foreach ([
             '/storage/app',
             '/storage/framework/cache/data',
@@ -46,17 +53,19 @@ final class PortableRuntime
             '/storage/logs',
         ] as $sub) {
             if (! is_dir($dir.$sub)) {
-                mkdir($dir.$sub, 0755, true);
+                mkdir($dir.$sub, 0700, true);
             }
         }
 
         if (! is_file($dir.'/.env')) {
             file_put_contents($dir.'/.env', self::defaultEnv($dir));
         }
+        @chmod($dir.'/.env', 0600);
 
         if (! is_file($dir.'/database.sqlite')) {
             touch($dir.'/database.sqlite');
         }
+        @chmod($dir.'/database.sqlite', 0600);
 
         return $dir;
     }

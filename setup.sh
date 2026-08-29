@@ -41,6 +41,9 @@ echo "==> Preparing database (audit log)"
 touch database/database.sqlite
 php artisan migrate --force --no-interaction
 
+echo "==> Securing secrets (owner-only)"
+chmod 600 .env database/database.sqlite
+
 echo "==> Running test suite"
 ./vendor/bin/pest
 
