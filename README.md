@@ -73,7 +73,7 @@ php bridge/artisan serve --host=127.0.0.1 --port=8321   # foreground, simplest
 ```
 
 - **launchd** (auto-start on login): see `extras/omnifocus-mcp-bridge.plist`
-- **[Solo](https://solo.dev)** users: a `solo.yml` is included — trust the "MCP bridge" process once and it auto-starts
+- **[Solo](https://soloterm.com)** users: a `solo.yml` is included — trust the "MCP bridge" process once and it auto-starts
 
 Then register the URL with the bearer token from `bridge/.env`:
 

@@ -57,7 +57,7 @@ php bridge/artisan serve --host=127.0.0.1 --port=8321
 ```
 
 - **Auto-start on login**: copy `extras/omnifocus-mcp-bridge.plist` to `~/Library/LaunchAgents/` (fill in the two placeholder paths first) and `launchctl load` it.
-- **[Solo](https://solo.dev)**: a `solo.yml` ships with the repo — trust the "MCP bridge" process once and Solo keeps it alive.
+- **[Solo](https://soloterm.com)**: a `solo.yml` ships with the repo — trust the "MCP bridge" process once and Solo keeps it alive.
 
 Register it with the token from `bridge/.env`:
 
