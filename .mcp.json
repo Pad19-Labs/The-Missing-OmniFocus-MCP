@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "omnifocus": {
-      "command": "php",
-      "args": ["bridge/artisan", "mcp:start", "omnifocus"]
-    }
-  }
-}

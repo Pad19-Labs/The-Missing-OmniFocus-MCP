@@ -1,0 +1,7 @@
+name: omafocus
+processes:
+  MCP bridge:
+    command: php artisan serve --host=127.0.0.1 --port=8321
+    working_dir: ./bridge
+    auto_start: true
+    auto_restart: true

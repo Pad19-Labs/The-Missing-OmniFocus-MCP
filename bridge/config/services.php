@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'omnifocus_bridge' => [
+        'token' => env('MCP_AUTH_TOKEN'),
+    ],
+
 ];
