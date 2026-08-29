@@ -30,15 +30,29 @@ Most community OmniFocus MCP servers are thin AppleScript-per-call wrappers: str
 ## Requirements
 
 - macOS with **OmniFocus 4 Pro** (Pro is required for the scripting bridge) — the app must be running
-- **PHP 8.3+** and **Composer** ([Laravel Herd](https://herd.laravel.com) is the easy path)
 - An MCP client — [Claude Code](https://claude.com/claude-code), Claude Desktop, or anything MCP-compatible
+- Nothing else for the binary install; PHP 8.3+ and Composer only if you run from source
 
-## Quick start
+## Install — single binary, no PHP (recommended)
+
+Grab the latest from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases). The binary is fully self-contained — a static PHP runtime and the app in one file. It keeps its state (auth token, audit log) in `~/Library/Application Support/MissingOmniFocusMCP/` and sets itself up on first run.
+
+**Claude Desktop — one click**: download `missing-omnifocus-mcp-macos-<arch>.mcpb` and open it. That's the whole install.
+
+**Claude Code / other clients**:
+
+```bash
+chmod +x missing-omnifocus-mcp-macos-arm64
+xattr -d com.apple.quarantine missing-omnifocus-mcp-macos-arm64   # Gatekeeper, until releases are notarized
+claude mcp add --scope user omnifocus -- /path/to/missing-omnifocus-mcp-macos-arm64 mcp:start omnifocus
+```
+
+## Install — from source
 
 ```bash
 git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git
 cd missing-omnifocus-mcp
-./setup.sh
+./setup.sh   # offers to install PHP via php.new if missing
 ```
 
 The script installs dependencies, creates `.env`, generates an auth token, migrates the audit database, and runs the test suite. Then pick a transport:

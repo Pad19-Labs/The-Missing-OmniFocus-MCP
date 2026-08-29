@@ -5,10 +5,24 @@
 ## Requirements
 
 - macOS with **OmniFocus 4 Pro** running (Pro is required for the scripting bridge)
-- **PHP 8.3+** and **Composer** — [Laravel Herd](https://herd.laravel.com) installs both in one step
 - An MCP client: [Claude Code](https://claude.com/claude-code), Claude Desktop, or any MCP-compatible agent
+- PHP is **not** required for the binary install below — only for running from source
 
-## Install
+## Install — single binary (recommended)
+
+Download from [Releases](https://github.com/Pad19-Labs/missing-omnifocus-mcp/releases) — the binary bundles its own PHP runtime and sets itself up on first run (state lives in `~/Library/Application Support/MissingOmniFocusMCP/`).
+
+**Claude Desktop**: download the `.mcpb` bundle and open it — one-click install.
+
+**Claude Code**:
+
+```bash
+chmod +x missing-omnifocus-mcp-macos-arm64
+xattr -d com.apple.quarantine missing-omnifocus-mcp-macos-arm64
+claude mcp add --scope user omnifocus -- /path/to/missing-omnifocus-mcp-macos-arm64 mcp:start omnifocus
+```
+
+## Install — from source
 
 ```bash
 git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git

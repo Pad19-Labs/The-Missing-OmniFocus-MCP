@@ -1,0 +1,19 @@
+{
+    "main": "artisan",
+    "output": "app.phar",
+    "directories": [
+        "app",
+        "bootstrap",
+        "config",
+        "database/migrations",
+        "public",
+        "resources",
+        "routes",
+        "vendor"
+    ],
+    "files": ["composer.json"],
+    "compactors": [],
+    "exclude-composer-files": false,
+    "check-requirements": false,
+    "stub": true
+}

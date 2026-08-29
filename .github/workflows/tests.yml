@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+      - name: Install dependencies
+        working-directory: bridge
+        run: composer install --no-interaction --prefer-dist
+      - name: Run test suite
+        working-directory: bridge
+        run: ./vendor/bin/pest

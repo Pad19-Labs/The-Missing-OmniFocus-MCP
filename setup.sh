@@ -5,7 +5,17 @@ set -euo pipefail
 
 cd "$(dirname "$0")/bridge"
 
-command -v php >/dev/null || { echo "php not found — install PHP 8.3+ (e.g. via Laravel Herd or Homebrew)"; exit 1; }
+if ! command -v php >/dev/null; then
+    echo "PHP not found."
+    read -r -p "Install PHP + Composer now via php.new (Laravel's official installer)? [y/N] " reply
+    if [[ "$reply" =~ ^[Yy] ]]; then
+        /bin/bash -c "$(curl -fsSL https://php.new/install/mac/8.4)"
+        export PATH="$HOME/.config/herd-lite/bin:$PATH"
+    else
+        echo "Install PHP 8.3+ yourself (Laravel Herd, Homebrew, or php.new) and re-run."
+        exit 1
+    fi
+fi
 command -v composer >/dev/null || { echo "composer not found — see https://getcomposer.org"; exit 1; }
 
 echo "==> Installing dependencies"
