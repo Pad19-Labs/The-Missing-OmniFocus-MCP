@@ -36,7 +36,7 @@ Most community OmniFocus MCP servers are thin AppleScript-per-call wrappers: str
 ## Quick start
 
 ```bash
-git clone https://github.com/peterramsing/missing-omnifocus-mcp.git
+git clone https://github.com/Pad19-Labs/missing-omnifocus-mcp.git
 cd missing-omnifocus-mcp
 ./setup.sh
 ```
