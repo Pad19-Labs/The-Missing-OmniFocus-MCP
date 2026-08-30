@@ -24,6 +24,8 @@ class CreateTaskTool extends OmniFocusTool
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string'],
             'estimated_minutes' => ['nullable', 'integer', 'min:1'],
+            'repetition_rule' => ['nullable', 'string'],
+            'repetition_method' => ['nullable', 'in:fixed,due_date,defer_until_date'],
         ]);
 
         return $this->respond(fn () => $this->client->createTask(
@@ -36,6 +38,8 @@ class CreateTaskTool extends OmniFocusTool
             flagged: $validated['flagged'] ?? null,
             tags: $validated['tags'] ?? null,
             estimatedMinutes: $validated['estimated_minutes'] ?? null,
+            repetitionRule: $validated['repetition_rule'] ?? null,
+            repetitionMethod: $validated['repetition_method'] ?? null,
         ));
     }
 
@@ -54,6 +58,8 @@ class CreateTaskTool extends OmniFocusTool
             'flagged' => $schema->boolean()->description('Flag the task.'),
             'tags' => $schema->array()->description('Tag names to apply; missing tags are created.'),
             'estimated_minutes' => $schema->integer()->description('Estimated duration in minutes.'),
+            'repetition_rule' => $schema->string()->description('Make the task repeat, as an iCalendar RRULE (e.g. "FREQ=WEEKLY;INTERVAL=1", "FREQ=DAILY", "FREQ=MONTHLY;BYDAY=1MO").'),
+            'repetition_method' => $schema->string()->enum(['fixed', 'due_date', 'defer_until_date'])->description('How the next repeat is scheduled: fixed (calendar cadence), due_date, or defer_until_date. Defaults to due_date when a rule is set.'),
         ];
     }
 }

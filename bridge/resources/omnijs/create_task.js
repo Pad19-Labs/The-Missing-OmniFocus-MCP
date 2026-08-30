@@ -1,3 +1,7 @@
+// Validate + build the repetition rule BEFORE creating anything, so an
+// invalid rule fails without leaving an orphan task or newly-created tags (H1).
+const rule = buildRepetitionRule(ARGS, null);
+
 let position = null;
 if (ARGS.project_id) {
   const p = Project.byIdentifier(ARGS.project_id);
@@ -9,6 +13,6 @@ if (ARGS.project_id) {
   position = parent.ending;
 }
 const t = new Task(ARGS.name);
-applyTaskFields(t, ARGS);
+applyTaskFields(t, ARGS, rule);
 if (position) moveTasks([t], position);
 return ok({ task: serializeTask(t) });

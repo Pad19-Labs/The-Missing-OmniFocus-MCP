@@ -47,7 +47,7 @@ function findOrCreateTag(name) {
   return flattenedTags.find(x => x.name === name) || new Tag(name);
 }
 
-function applyTaskFields(t, args) {
+function applyTaskFields(t, args, preBuiltRule) {
   if (args.name !== undefined && args.name !== null) t.name = args.name;
   if (args.note !== undefined && args.note !== null) t.note = args.note;
   if (args.due !== undefined) t.dueDate = args.due ? new Date(args.due) : null;
@@ -58,6 +58,44 @@ function applyTaskFields(t, args) {
     t.clearTags();
     for (const name of args.tags) t.addTag(findOrCreateTag(name));
   }
+  // Recurrence is applied last, from a rule already validated/built by
+  // buildRepetitionRule (called before any mutation — see H1). `preBuiltRule`
+  // is undefined (no change), null (clear), or a Task.RepetitionRule.
+  if (preBuiltRule !== undefined) {
+    t.repetitionRule = preBuiltRule; // null clears it
+  }
+}
+
+// Validate + construct a task's repetition rule WITHOUT touching the task.
+// Returns: undefined (no recurrence change), null (clear), or a
+// Task.RepetitionRule. Throws on invalid input, so callers run it before any
+// mutation and keep create/update atomic with respect to a bad rule.
+// `existing` is the task's current repetitionRule (for update method-preservation).
+function buildRepetitionRule(args, existing) {
+  if (args.repetition_rule === undefined && args.repetition_method === undefined) {
+    return undefined;
+  }
+  if (args.repetition_rule === null) {
+    return null;
+  }
+  // Method-only change: rebuild from the existing rule string.
+  if (args.repetition_rule === undefined) {
+    if (!existing) throw new Error("repetition_method given but the task has no repetition rule to modify");
+    const m = repetitionMethodFromName(args.repetition_method);
+    if (m === undefined) throw new Error("Unknown repetition_method: " + args.repetition_method);
+    return new Task.RepetitionRule(existing.ruleString, m);
+  }
+  // Rule given. Preserve the existing method unless a new one is supplied.
+  let method;
+  if (args.repetition_method) {
+    method = repetitionMethodFromName(args.repetition_method);
+    if (method === undefined) throw new Error("Unknown repetition_method: " + args.repetition_method);
+  } else if (existing) {
+    method = existing.method;
+  } else {
+    method = Task.RepetitionMethod.DueDate;
+  }
+  return new Task.RepetitionRule(args.repetition_rule, method);
 }
 
 function serializeTask(t, noteLimit) {
@@ -78,9 +116,37 @@ function serializeTask(t, noteLimit) {
     project: t.containingProject ? t.containingProject.name : null,
     parent_id: t.parent ? t.parent.id.primaryKey : null,
     estimated_minutes: t.estimatedMinutes,
-    has_repetition: t.repetitionRule !== null,
+    has_repetition: serializeRepetition(t.repetitionRule) !== null,
+    repetition: serializeRepetition(t.repetitionRule),
     note: t.note ? String(t.note).slice(0, limit) : null,
   };
+}
+
+function repetitionMethodName(m) {
+  const names = new Map([
+    [Task.RepetitionMethod.Fixed, "fixed"],
+    [Task.RepetitionMethod.DueDate, "due_date"],
+    [Task.RepetitionMethod.DeferUntilDate, "defer_until_date"],
+    [Task.RepetitionMethod.None, "none"],
+  ]);
+  return names.get(m) || "none";
+}
+
+function repetitionMethodFromName(name) {
+  const methods = new Map([
+    ["fixed", Task.RepetitionMethod.Fixed],
+    ["due_date", Task.RepetitionMethod.DueDate],
+    ["defer_until_date", Task.RepetitionMethod.DeferUntilDate],
+  ]);
+  return methods.get(name);
+}
+
+function serializeRepetition(rule) {
+  if (!rule) return null;
+  const method = repetitionMethodName(rule.method);
+  // A rule whose method is None does not actually repeat — report no repetition.
+  if (method === "none") return null;
+  return { rule: rule.ruleString, method: method };
 }
 
 function serializeProject(p) {

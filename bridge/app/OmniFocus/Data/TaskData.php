@@ -26,6 +26,7 @@ final readonly class TaskData
         public ?string $parentId,
         public ?int $estimatedMinutes,
         public bool $hasRepetition,
+        public ?RepetitionData $repetition,
         public ?string $note,
     ) {}
 
@@ -48,6 +49,7 @@ final readonly class TaskData
             parentId: $data['parent_id'],
             estimatedMinutes: $data['estimated_minutes'],
             hasRepetition: $data['has_repetition'],
+            repetition: RepetitionData::fromArray($data['repetition'] ?? null),
             note: $data['note'],
         );
     }
