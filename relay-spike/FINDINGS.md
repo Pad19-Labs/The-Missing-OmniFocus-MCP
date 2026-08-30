@@ -53,3 +53,33 @@ Phase 0 clears the biggest risks. The architecture holds:
 - Per-pairing AEAD gives the honest "zero plaintext at rest" posture.
 - Offline detection is clean and fast.
 Ready to proceed to Phase 1 (relay skeleton).
+
+---
+
+## CORRECTIONS after independent review (2026-08-30) — supersedes the above
+
+An independent reviewer (Fable) verified the external claims against primary
+sources and found two of this spike's conclusions FALSE:
+
+1. **FrankenPHP does NOT let a PHP app accept WebSocket connections**
+   (frankenphp issue #1888 — feature request, unimplemented). "Option 1" above
+   is not technically possible. **v1 transport is now HTTPS LONG-POLL**: the
+   Mac's tunnel loop does authenticated GET /tunnel/next (server-side BLPOP
+   ~25s) + POST /tunnel/reply. No daemons, edge-safe, trivial reconnect.
+   The proven Redis BLPOP/RPUSH correlation core is unchanged.
+2. **Octane/FrankenPHP does not make BLPOP async** — worker mode removes boot
+   cost only; a held request still pins a worker. Mitigations: per-user
+   in-flight cap (1–2), short timeouts, sized pool. Must also verify Laravel
+   Cloud's edge permits a ~30s held request (10-minute probe in Phase 1).
+3. **Key model upgraded (B3)**: relay stores only a HASH of the pairing secret;
+   the frame key is established per-connection via X25519 ECDH and held in
+   relay memory only — so nothing at rest on the relay can decrypt frames.
+   ("Zero plaintext at rest" is now true rather than approximately true.)
+
+Also mandated for the build: AAD-bound envelopes + one-time request_ids +
+deadlines (replay protection), TTLs on all relay:* keys, presence keys with
+heartbeat TTL for offline detection, per-device tool-manifest at connect,
+metadata-only relay logging (scrub MCP bodies from exception context, no IPs),
+pairing-code expiry/single-use/rate limits, device revocation that kills live
+tunnels, a relay CI job, and a shared tunnel-protocol package (or contract
+tests) so the frame format can't drift between apps.
