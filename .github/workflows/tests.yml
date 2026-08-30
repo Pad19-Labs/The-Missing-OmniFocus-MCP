@@ -6,7 +6,30 @@ on:
   pull_request:
 
 jobs:
-  pest:
+  # Path filtering lives in a job rather than `on.paths` so that required
+  # status checks still report on every PR: a skipped job never reports at all,
+  # which would leave a branch-protection check pending forever.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      bridge: ${{ steps.filter.outputs.bridge }}
+      relay: ${{ steps.filter.outputs.relay }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: filter
+        with:
+          filters: |
+            bridge:
+              - 'bridge/**'
+              - '.github/**'
+            relay:
+              - 'relay/**'
+              - '.github/**'
+
+  bridge:
+    needs: changes
+    if: needs.changes.outputs.bridge == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -18,4 +41,23 @@ jobs:
         run: composer install --no-interaction --prefer-dist
       - name: Run test suite
         working-directory: bridge
+        run: ./vendor/bin/pest
+
+  relay:
+    needs: changes
+    if: needs.changes.outputs.relay == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.5'
+      - name: Install dependencies
+        working-directory: relay
+        run: composer install --no-interaction --prefer-dist
+      - name: Check formatting
+        working-directory: relay
+        run: ./vendor/bin/pint --test
+      - name: Run test suite
+        working-directory: relay
         run: ./vendor/bin/pest
