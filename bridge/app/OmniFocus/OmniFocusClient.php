@@ -132,7 +132,7 @@ class OmniFocusClient
             throw new ScriptException('create_task accepts project_id or parent_task_id, not both.');
         }
 
-        $this->assertRepetitionMethod($repetitionMethod);
+        $this->assertRepetition($repetitionRule, $repetitionMethod, onCreate: true);
 
         $data = $this->mutate('create_task', [
             'name' => $name,
@@ -156,17 +156,37 @@ class OmniFocusClient
      */
     public function updateTask(string $id, array $fields): TaskData
     {
-        $this->assertRepetitionMethod($fields['repetition_method'] ?? null);
+        $this->assertRepetition(
+            $fields['repetition_rule'] ?? null,
+            $fields['repetition_method'] ?? null,
+            onCreate: false,
+        );
 
         $data = $this->mutate('update_task', ['id' => $id] + $fields);
 
         return TaskData::fromArray($data['task']);
     }
 
-    private function assertRepetitionMethod(?string $method): void
+    private function assertRepetition(?string $rule, ?string $method, bool $onCreate): void
     {
         if ($method !== null && RepetitionMethod::tryFrom($method) === null) {
             throw new ScriptException("Unknown repetition_method: {$method}. Use fixed, due_date, or defer_until_date.");
+        }
+
+        if ($rule !== null) {
+            $rule = trim($rule);
+            if ($rule === '' || strlen($rule) > 1024) {
+                throw new ScriptException('repetition_rule must be a non-empty iCalendar RRULE under 1024 characters.');
+            }
+            if (! str_contains($rule, 'FREQ=')) {
+                throw new ScriptException('repetition_rule must be an iCalendar RRULE containing FREQ= (e.g. FREQ=WEEKLY;INTERVAL=1).');
+            }
+        }
+
+        // On create, a method without a rule silently produced a non-repeating
+        // task; require the rule so intent is explicit.
+        if ($onCreate && $method !== null && $rule === null) {
+            throw new ScriptException('repetition_method requires repetition_rule when creating a task.');
         }
     }
 

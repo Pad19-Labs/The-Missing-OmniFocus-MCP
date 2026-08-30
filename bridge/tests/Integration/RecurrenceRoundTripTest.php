@@ -53,3 +53,41 @@ it('creates, reads, updates, and clears a repetition rule on a real task', funct
     expect($cleared->hasRepetition)->toBeFalse()
         ->and($cleared->repetition)->toBeNull();
 });
+
+it('leaves no orphan when an invalid rule is given on create (H1)', function () {
+    $client = recClient();
+
+    // A malformed RRULE must NOT create a task or its tags.
+    $threw = false;
+    try {
+        $client->createTask(
+            name: REC_PREFIX.'should-not-exist',
+            tags: [REC_PREFIX.'should-not-exist-tag'],
+            repetitionRule: 'FREQ=NONSENSE;GARBAGE',
+        );
+    } catch (Throwable) {
+        $threw = true;
+    }
+    expect($threw)->toBeTrue();
+
+    // No task with that name exists.
+    $found = $client->search(REC_PREFIX.'should-not-exist')['tasks'];
+    expect($found)->toBeEmpty();
+});
+
+it('preserves the existing method when only the rule changes on update (M1)', function () {
+    $client = recClient();
+
+    $task = $client->createTask(
+        name: REC_PREFIX.'fixed cadence',
+        due: '2026-09-01T17:00:00Z',
+        repetitionRule: 'FREQ=WEEKLY',
+        repetitionMethod: 'fixed',
+    );
+    expect($task->repetition->method)->toBe('fixed');
+
+    // Change only the rule — the method must stay 'fixed', not reset to due_date.
+    $updated = $client->updateTask($task->id, ['repetition_rule' => 'FREQ=DAILY']);
+    expect($updated->repetition->rule)->toBe('FREQ=DAILY')
+        ->and($updated->repetition->method)->toBe('fixed');
+});

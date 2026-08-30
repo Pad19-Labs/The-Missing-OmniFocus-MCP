@@ -48,7 +48,7 @@ class UpdateTaskTool extends OmniFocusTool
             'tags' => $schema->array()->description('Replacement tag set; missing tags are created.'),
             'estimated_minutes' => $schema->integer()->description('New duration estimate in minutes.'),
             'status' => $schema->string()->enum(['active', 'completed', 'dropped'])->description('Mark the task completed, dropped, or active again.'),
-            'repetition_rule' => $schema->string()->description('Set the repeat as an iCalendar RRULE (e.g. "FREQ=WEEKLY"); pass null to stop the task repeating.'),
+            'repetition_rule' => $schema->string()->nullable()->description('Set the repeat as an iCalendar RRULE (e.g. "FREQ=WEEKLY"); pass null to stop the task repeating.'),
             'repetition_method' => $schema->string()->enum(['fixed', 'due_date', 'defer_until_date'])->description('How the next repeat is scheduled. Defaults to due_date.'),
         ];
     }
