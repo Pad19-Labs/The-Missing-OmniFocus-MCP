@@ -115,7 +115,6 @@ The integration suite creates loudly-prefixed disposable objects and removes the
 - GTD agent skills built on the tools (inbox triage, weekly-review coaching)
 - Signed & notarized releases (no Gatekeeper incantations)
 - Remote access recipes (Tailscale) for Linux and mobile clients
-- Repeating-task (RecurrenceRule) editing
 - When Omni ships official MCP support, this bridge's transport layer is designed to be swappable
 
 ## License

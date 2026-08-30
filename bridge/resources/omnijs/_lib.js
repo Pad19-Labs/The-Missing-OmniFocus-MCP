@@ -58,6 +58,16 @@ function applyTaskFields(t, args) {
     t.clearTags();
     for (const name of args.tags) t.addTag(findOrCreateTag(name));
   }
+  if (args.repetition_rule !== undefined) {
+    if (args.repetition_rule === null) {
+      t.repetitionRule = null;
+    } else {
+      const method = args.repetition_method
+        ? repetitionMethodFromName(args.repetition_method)
+        : Task.RepetitionMethod.DueDate;
+      t.repetitionRule = new Task.RepetitionRule(args.repetition_rule, method);
+    }
+  }
 }
 
 function serializeTask(t, noteLimit) {
@@ -79,8 +89,32 @@ function serializeTask(t, noteLimit) {
     parent_id: t.parent ? t.parent.id.primaryKey : null,
     estimated_minutes: t.estimatedMinutes,
     has_repetition: t.repetitionRule !== null,
+    repetition: serializeRepetition(t.repetitionRule),
     note: t.note ? String(t.note).slice(0, limit) : null,
   };
+}
+
+function repetitionMethodName(m) {
+  const names = new Map([
+    [Task.RepetitionMethod.Fixed, "fixed"],
+    [Task.RepetitionMethod.DueDate, "due_date"],
+    [Task.RepetitionMethod.DeferUntilDate, "defer_until_date"],
+  ]);
+  return names.get(m) || String(m);
+}
+
+function repetitionMethodFromName(name) {
+  const methods = new Map([
+    ["fixed", Task.RepetitionMethod.Fixed],
+    ["due_date", Task.RepetitionMethod.DueDate],
+    ["defer_until_date", Task.RepetitionMethod.DeferUntilDate],
+  ]);
+  return methods.get(name);
+}
+
+function serializeRepetition(rule) {
+  if (!rule) return null;
+  return { rule: rule.ruleString, method: repetitionMethodName(rule.method) };
 }
 
 function serializeProject(p) {

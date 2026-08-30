@@ -9,6 +9,7 @@ use App\OmniFocus\Data\FolderData;
 use App\OmniFocus\Data\ProjectData;
 use App\OmniFocus\Data\TaskData;
 use App\OmniFocus\Enums\ProjectStatus;
+use App\OmniFocus\Enums\RepetitionMethod;
 use App\OmniFocus\Enums\TaskStatus;
 use App\OmniFocus\Exceptions\CascadeConfirmationRequired;
 use App\OmniFocus\Exceptions\NotFoundException;
@@ -124,10 +125,14 @@ class OmniFocusClient
         ?bool $flagged = null,
         ?array $tags = null,
         ?int $estimatedMinutes = null,
+        ?string $repetitionRule = null,
+        ?string $repetitionMethod = null,
     ): TaskData {
         if ($projectId !== null && $parentTaskId !== null) {
             throw new ScriptException('create_task accepts project_id or parent_task_id, not both.');
         }
+
+        $this->assertRepetitionMethod($repetitionMethod);
 
         $data = $this->mutate('create_task', [
             'name' => $name,
@@ -139,6 +144,8 @@ class OmniFocusClient
             'flagged' => $flagged,
             'tags' => $tags,
             'estimated_minutes' => $estimatedMinutes,
+            'repetition_rule' => $repetitionRule,
+            'repetition_method' => $repetitionMethod,
         ]);
 
         return TaskData::fromArray($data['task']);
@@ -149,9 +156,18 @@ class OmniFocusClient
      */
     public function updateTask(string $id, array $fields): TaskData
     {
+        $this->assertRepetitionMethod($fields['repetition_method'] ?? null);
+
         $data = $this->mutate('update_task', ['id' => $id] + $fields);
 
         return TaskData::fromArray($data['task']);
+    }
+
+    private function assertRepetitionMethod(?string $method): void
+    {
+        if ($method !== null && RepetitionMethod::tryFrom($method) === null) {
+            throw new ScriptException("Unknown repetition_method: {$method}. Use fixed, due_date, or defer_until_date.");
+        }
     }
 
     public function moveTask(

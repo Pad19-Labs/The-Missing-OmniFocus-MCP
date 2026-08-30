@@ -35,10 +35,10 @@ One project by `id`, with all of its tasks.
 Every write is recorded in the local audit log.
 
 ### `create-task`
-`name` (required), `note`, `due`, `defer` (ISO 8601), `flagged`, `tags` (created if missing), `estimated_minutes`. Destination: `project_id`, `parent_task_id`, or neither — which means the inbox, the standard GTD capture.
+`name` (required), `note`, `due`, `defer` (ISO 8601), `flagged`, `tags` (created if missing), `estimated_minutes`. Destination: `project_id`, `parent_task_id`, or neither — which means the inbox, the standard GTD capture. Make it recurring with `repetition_rule` (an iCalendar RRULE, e.g. `FREQ=WEEKLY;INTERVAL=1`) and optional `repetition_method` (`fixed` / `due_date` / `defer_until_date`, default `due_date`).
 
 ### `update-task`
-`id` (required) plus any of the fields above, or `status` (`completed` / `dropped` / `active`). Only passed fields change; `tags` replaces the whole tag set; passing `null` for a date clears it.
+`id` (required) plus any of the fields above, or `status` (`completed` / `dropped` / `active`). Only passed fields change; `tags` replaces the whole tag set; passing `null` for a date clears it. Set or change a repeat with `repetition_rule`; pass `repetition_rule: null` to stop the task repeating.
 
 ### `move-task`
 `id` plus exactly one destination: `project_id` (file it), `parent_task_id` (nest it), or `to_inbox: true`.
