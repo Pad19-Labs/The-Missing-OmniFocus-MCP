@@ -3,6 +3,7 @@
 namespace App\OmniFocus;
 
 use App\Models\AuditLog;
+use App\Models\DeletionToken;
 use App\OmniFocus\Contracts\OmniJsRunner;
 use App\OmniFocus\Data\FolderData;
 use App\OmniFocus\Data\ProjectData;
@@ -13,6 +14,7 @@ use App\OmniFocus\Exceptions\CascadeConfirmationRequired;
 use App\OmniFocus\Exceptions\NotFoundException;
 use App\OmniFocus\Exceptions\OmniFocusException;
 use App\OmniFocus\Exceptions\ScriptException;
+use Illuminate\Support\Facades\Log;
 use JsonException;
 
 class OmniFocusClient
@@ -123,6 +125,10 @@ class OmniFocusClient
         ?array $tags = null,
         ?int $estimatedMinutes = null,
     ): TaskData {
+        if ($projectId !== null && $parentTaskId !== null) {
+            throw new ScriptException('create_task accepts project_id or parent_task_id, not both.');
+        }
+
         $data = $this->mutate('create_task', [
             'name' => $name,
             'note' => $note,
@@ -154,6 +160,11 @@ class OmniFocusClient
         ?string $parentTaskId = null,
         bool $toInbox = false,
     ): TaskData {
+        $destinations = array_filter([$projectId, $parentTaskId, $toInbox ?: null]);
+        if (count($destinations) !== 1) {
+            throw new ScriptException('move_task requires exactly one destination: project_id, parent_task_id, or to_inbox.');
+        }
+
         $data = $this->mutate('move_task', [
             'id' => $id,
             'project_id' => $projectId,
@@ -229,45 +240,130 @@ class OmniFocusClient
     }
 
     /**
-     * @return array{id: string, type: string, name: string, children: int}
+     * Two-step delete. Without a valid confirmation token, previews the target
+     * and returns a single-use token bound to (type, id) — the caller must send
+     * it back on a separate call to actually delete. This separates requesting
+     * a deletion from confirming it, and surfaces the true recursive blast
+     * radius before anything is destroyed.
+     *
+     * @return array<string, mixed>
      */
-    public function deleteItem(string $type, string $id, bool $confirmCascade = false): array
+    public function deleteItem(string $type, string $id, ?string $confirmationToken = null): array
     {
-        return $this->mutate('delete_item', [
+        if ($confirmationToken === null) {
+            return $this->previewDelete($type, $id);
+        }
+
+        $token = DeletionToken::where('token', $confirmationToken)->first();
+
+        if (! $token || ! $token->isValidFor($type, $id)) {
+            throw new CascadeConfirmationRequired(
+                'Invalid, expired, or already-used confirmation token. Call delete_item without a token first to preview and obtain a fresh one.'
+            );
+        }
+
+        $result = $this->mutate('delete_item', [
             'type' => $type,
             'id' => $id,
-            'confirm_cascade' => $confirmCascade,
+            'confirmed' => true,
         ]);
+
+        $token->update(['used_at' => now()]);
+
+        return $result + ['deleted' => true];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function previewDelete(string $type, string $id): array
+    {
+        $data = $this->mutate('preview_delete', ['type' => $type, 'id' => $id], status: 'preview');
+
+        $token = DeletionToken::create([
+            'token' => bin2hex(random_bytes(24)),
+            'type' => $type,
+            'item_id' => $id,
+            'item_name' => $data['name'],
+            'descendants' => $data['descendants'],
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        return [
+            'requires_confirmation' => true,
+            'type' => $type,
+            'id' => $id,
+            'name' => $data['name'],
+            'descendants' => $data['descendants'],
+            'confirmation_token' => $token->token,
+            'message' => $data['descendants'] > 0
+                ? "Deleting this {$type} will permanently remove it and {$data['descendants']} descendant item(s). Call delete_item again with confirmation_token to proceed."
+                : "This {$type} has no descendants. Call delete_item again with confirmation_token to permanently delete it.",
+        ];
     }
 
     /**
      * Run a write template and record it in the audit log, success or failure.
      */
-    private function mutate(string $template, array $args): array
+    private function mutate(string $template, array $args, string $status = 'ok'): array
     {
         $startedAt = hrtime(true);
 
         try {
             $data = $this->call($template, $args);
-            $this->recordAudit($template, $args, 'ok', $this->summarize($data), $startedAt);
-
-            return $data;
         } catch (OmniFocusException $e) {
-            $this->recordAudit($template, $args, 'error', ['message' => $e->getMessage()], $startedAt);
+            // The mutation did not commit, so an audit failure here is harmless.
+            $this->recordAudit($this->auditAction($template), $args, 'error', ['message' => $e->getMessage()], $startedAt);
 
             throw $e;
         }
+
+        // The mutation HAS committed in OmniFocus. An audit-log failure must
+        // never turn this into a reported error, or the agent will retry and
+        // duplicate the write. Record best-effort; surface a warning instead.
+        $audited = $this->recordAudit($this->auditAction($template), $args, $status, $this->summarize($data), $startedAt);
+
+        if (! $audited) {
+            $data['audit_status'] = 'failed';
+        }
+
+        return $data;
     }
 
-    private function recordAudit(string $action, array $args, string $status, array $summary, int $startedAtNs): void
+    /**
+     * The preview and confirmed-delete templates are both facets of the
+     * delete_item tool, so they share its audit action name.
+     */
+    private function auditAction(string $template): string
     {
-        AuditLog::create([
-            'action' => $action,
-            'arguments' => array_filter($args, fn ($v) => $v !== null),
-            'result_summary' => $summary,
-            'status' => $status,
-            'duration_ms' => intdiv(hrtime(true) - $startedAtNs, 1_000_000),
-        ]);
+        return $template === 'preview_delete' ? 'delete_item' : $template;
+    }
+
+    /**
+     * Best-effort audit write. Returns false (never throws) if the log is
+     * unavailable, so a committed mutation is still reported as success.
+     */
+    private function recordAudit(string $action, array $args, string $status, array $summary, int $startedAtNs): bool
+    {
+        try {
+            AuditLog::create([
+                'action' => $action,
+                'arguments' => array_filter($args, fn ($v) => $v !== null),
+                'result_summary' => $summary,
+                'status' => $status,
+                'duration_ms' => intdiv(hrtime(true) - $startedAtNs, 1_000_000),
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('omafocus: audit log write failed', [
+                'action' => $action,
+                'status' => $status,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function summarize(array $data): array

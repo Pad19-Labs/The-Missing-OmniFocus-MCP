@@ -19,23 +19,32 @@ function writeClient(): OmniFocusClient
     return app(OmniFocusClient::class);
 }
 
+// Two-step delete: preview to obtain a token, then confirm.
+function forceDelete(OmniFocusClient $client, string $type, string $id): void
+{
+    rescue(function () use ($client, $type, $id) {
+        $preview = $client->deleteItem($type, $id);
+        $client->deleteItem($type, $id, confirmationToken: $preview['confirmation_token']);
+    }, report: false);
+}
+
 afterEach(function () {
     $client = writeClient();
 
     foreach ($client->overview()['folders'] as $folder) {
         if (str_starts_with($folder['name'], TEST_PREFIX)) {
-            rescue(fn () => $client->deleteItem('folder', $folder['id'], confirmCascade: true), report: false);
+            forceDelete($client, 'folder', $folder['id']);
         }
     }
 
     foreach ($client->listProjects()['projects'] as $project) {
         if (str_starts_with($project->name, TEST_PREFIX)) {
-            rescue(fn () => $client->deleteItem('project', $project->id, confirmCascade: true), report: false);
+            forceDelete($client, 'project', $project->id);
         }
     }
 
     foreach ($client->search(TEST_PREFIX, limit: 50)['tasks'] as $task) {
-        rescue(fn () => $client->deleteItem('task', $task->id, confirmCascade: true), report: false);
+        forceDelete($client, 'task', $task->id);
     }
 });
 
@@ -78,12 +87,21 @@ it('runs the full organize lifecycle: create, file, promote, reorganize, guarded
     $onHold = $client->updateProject($project->id, ['status' => 'on_hold']);
     expect($onHold->status)->toBe(ProjectStatus::OnHold);
 
-    // Guarded delete: refuse without confirmation, then delete with it
-    expect(fn () => $client->deleteItem('folder', $folder->id))
+    // Two-step delete: preview reports the true recursive count and a token;
+    // a first call never deletes.
+    $preview = $client->deleteItem('folder', $folder->id);
+    expect($preview['requires_confirmation'])->toBeTrue()
+        ->and($preview['descendants'])->toBeGreaterThan(0)
+        ->and($client->getProject($project->id)['project']->id)->toBe($project->id);
+
+    // A bad token is refused.
+    expect(fn () => $client->deleteItem('folder', $folder->id, confirmationToken: 'wrong'))
         ->toThrow(CascadeConfirmationRequired::class);
 
-    $deleted = $client->deleteItem('folder', $folder->id, confirmCascade: true);
-    expect($deleted['children'])->toBeGreaterThan(0);
+    // The real token deletes, and reports what it removed.
+    $deleted = $client->deleteItem('folder', $folder->id, confirmationToken: $preview['confirmation_token']);
+    expect($deleted['deleted'])->toBeTrue()
+        ->and($deleted['deleted_descendants'])->toBeGreaterThan(0);
 
     // Fresh call confirms the cascade took everything with it
     expect(fn () => $client->getProject($project->id))->toThrow(NotFoundException::class);

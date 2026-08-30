@@ -41,6 +41,28 @@ it('never overwrites an existing env file on re-run', function () {
     expect(file_get_contents($this->dataDir.'/.env'))->toBe($original);
 });
 
+it('creates the data dir private (0700) and secrets private (0600)', function () {
+    $dir = PortableRuntime::prepare($this->dataDir);
+
+    $mode = fn (string $p) => substr(sprintf('%o', fileperms($p)), -4);
+
+    expect($mode($dir))->toBe('0700')
+        ->and($mode($dir.'/.env'))->toBe('0600')
+        ->and($mode($dir.'/database.sqlite'))->toBe('0600');
+});
+
+it('repairs loosened permissions on a re-run', function () {
+    PortableRuntime::prepare($this->dataDir);
+    chmod($this->dataDir.'/.env', 0644);
+    chmod($this->dataDir, 0755);
+
+    PortableRuntime::prepare($this->dataDir);
+
+    $mode = fn (string $p) => substr(sprintf('%o', fileperms($p)), -4);
+    expect($mode($this->dataDir.'/.env'))->toBe('0600')
+        ->and($mode($this->dataDir))->toBe('0700');
+});
+
 it('generates a unique 64-char hex MCP token', function () {
     PortableRuntime::prepare($this->dataDir);
 

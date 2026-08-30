@@ -7,7 +7,6 @@ use App\OmniFocus\Data\ProjectData;
 use App\OmniFocus\Data\TaskData;
 use App\OmniFocus\Enums\ProjectStatus;
 use App\OmniFocus\Enums\TaskStatus;
-use App\OmniFocus\Exceptions\CascadeConfirmationRequired;
 use App\OmniFocus\Exceptions\NotFoundException;
 use App\OmniFocus\OmniFocusClient;
 use Tests\Support\FakeOmniJsRunner;
@@ -121,28 +120,17 @@ it('creates and updates folders', function () {
     expect($folder->parentId)->toBe('f1');
 });
 
-it('refuses to delete an item with children without confirmation', function () {
-    $this->runner->queueError('cascade_confirmation_required', 'The folder contains 7 item(s). Pass confirm_cascade to delete anyway.');
+// The full two-step delete-confirmation flow is covered in DeleteConfirmationTest.
+it('previews a delete without a token and records the audit row', function () {
+    $this->runner->queueOk(['id' => 'f1', 'type' => 'folder', 'name' => 'Old area', 'descendants' => 7]);
 
-    try {
-        $this->client->deleteItem('folder', 'f1');
-        $this->fail('Expected CascadeConfirmationRequired');
-    } catch (CascadeConfirmationRequired $e) {
-        expect($e->getMessage())->toContain('7 item(s)');
-    }
+    $result = $this->client->deleteItem('folder', 'f1');
 
-    $this->assertDatabaseHas('audit_logs', ['action' => 'delete_item', 'status' => 'error']);
-});
+    expect($result['requires_confirmation'])->toBeTrue()
+        ->and($result['descendants'])->toBe(7)
+        ->and($this->runner->lastScript())->not->toContain('deleteObject');
 
-it('deletes with confirm_cascade and records the audit row', function () {
-    $this->runner->queueOk(['id' => 'f1', 'type' => 'folder', 'name' => 'Old area', 'children' => 7]);
-
-    $result = $this->client->deleteItem('folder', 'f1', confirmCascade: true);
-
-    expect($result['children'])->toBe(7)
-        ->and($this->runner->lastScript())->toContain('"confirm_cascade":true');
-
-    $this->assertDatabaseHas('audit_logs', ['action' => 'delete_item', 'status' => 'ok']);
+    $this->assertDatabaseHas('audit_logs', ['action' => 'delete_item', 'status' => 'preview']);
 });
 
 it('records failed mutations in the audit log and rethrows', function () {

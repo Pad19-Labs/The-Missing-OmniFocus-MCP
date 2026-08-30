@@ -17,6 +17,26 @@ BUILD="$ROOT/build"
 DIST="$ROOT/dist"
 mkdir -p "$BUILD/tools" "$DIST"
 
+# Pinned SHA-256 of every network download, so a compromised release asset,
+# CDN, or TLS-terminating proxy cannot slip modified code into the shipped
+# binary. Recorded from the official sources; bump when versions change.
+BOX_SHA256="aa0966319f709e74bf2bf1d58ddb987903ae4f6d0a9d335ec2261813c189f7fc"
+MICRO_SHA256_aarch64="141cc12c5f2bfbe2862669545ea18be1f5b5b33ae95b7b8ad767afe75e6e9f59"
+MICRO_SHA256_x86_64="752fd5b19d98d5f056ff884ca7ae314c1cd72069882cec49d699fc28ff5362e0"
+
+verify_sha256() {
+    local file="$1" expected="$2"
+    local actual
+    actual="$(shasum -a 256 "$file" | awk '{print $1}')"
+    if [ "$actual" != "$expected" ]; then
+        echo "ERROR: checksum mismatch for $file" >&2
+        echo "  expected $expected" >&2
+        echo "  actual   $actual" >&2
+        rm -f "$file"
+        exit 1
+    fi
+}
+
 echo "==> Copying app (fresh, no dev files)"
 rsync -a --delete \
     --exclude .env --exclude storage --exclude tests --exclude node_modules \
@@ -33,12 +53,14 @@ echo "==> Building phar (box $BOX_VERSION)"
 BOX="$BUILD/tools/box-$BOX_VERSION.phar"
 [ -f "$BOX" ] || curl -fsSL -o "$BOX" \
     "https://github.com/box-project/box/releases/download/$BOX_VERSION/box.phar"
+verify_sha256 "$BOX" "$BOX_SHA256"
 (cd "$BUILD/app" && php -d phar.readonly=0 "$BOX" compile --no-interaction)
 
 echo "==> Fetching static PHP $PHP_VERSION micro ($SPC_ARCH)"
 MICRO_TGZ="$BUILD/tools/php-$PHP_VERSION-micro-macos-$SPC_ARCH.tar.gz"
 [ -f "$MICRO_TGZ" ] || curl -fsSL -o "$MICRO_TGZ" \
     "https://dl.static-php.dev/static-php-cli/common/php-$PHP_VERSION-micro-macos-$SPC_ARCH.tar.gz"
+eval "verify_sha256 \"\$MICRO_TGZ\" \"\$MICRO_SHA256_$SPC_ARCH\""
 tar -xzf "$MICRO_TGZ" -C "$BUILD/tools"
 
 echo "==> Combining"
